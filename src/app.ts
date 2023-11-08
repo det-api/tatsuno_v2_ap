@@ -20,6 +20,14 @@ import blinkLed, { lowLed } from "./connection/ledBlink";
 import initialSetupRoute from "./router/initialSetup.routes";
 import { rp } from "./migrations/migrator";
 import { getLastPrice } from "./service/dailyPrice.service";
+import { get, mqttEmitter, set } from "./utils/helper";
+import autoPermitRoute from "./router/autoPermit.routes";
+import { autoPermitGet } from "./service/autoPermit.service";
+import {
+  apController,
+  apFinalDropController,
+  apPPController,
+} from "./connection/apControl";
 
 const app = express();
 app.use(fileUpload());
@@ -32,25 +40,32 @@ client.on("connect", connect);
 client.on("message", async (topic, message) => {
   let data = topic.split("/");
 
-  console.log(data , message.toString());
+  // console.log(data, message.toString());
+
+  if (data[2] == "permit") {
+    apController(data[3], message.toString());
+  }
 
   if (data[2] == "active") {
-    //d blinkLed(Number(data[3]));
+    // blinkLed(Number(data[3]));
   }
 
   if (data[2] == "Final") {
     console.log(topic, message);
+    let mode = await get("mode");
     detailSaleUpdateByDevice(data[3], message.toString());
+    if (mode == "allow") await apFinalDropController(data[3], message.toString());
   }
 
   if (data[2] == "livedata") {
+    let mode = await get("mode");
     liveDataChangeHandler(message.toString());
+    if (mode == "allow") await apPPController(data[3], message.toString());
   }
 
-  if(data[2] == "pricereq"){
-    getLastPrice( message.toString());
+  if (data[2] == "pricereq") {
+    getLastPrice(message.toString());
   }
-
 });
 
 const port = config.get<number>("port");
@@ -78,6 +93,8 @@ app.use("/api/fuel-balance", fuelBalanceRoute);
 app.use("/api/fuelIn", fuelInRoute);
 
 app.use("/api/daily-price", dailyPriceRoute);
+
+app.use("/api/auto-permit", autoPermitRoute);
 
 // app.use("/api/test", localToDeviceRoute);
 

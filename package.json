@@ -16,6 +16,7 @@
     "@types/mqtt": "^2.5.0",
     "@types/node-cron": "^3.0.7",
     "@types/socket.io": "^3.0.2",
+    "async-redis": "^2.0.0",
     "axios": "^1.4.0",
     "bcryptjs": "^2.4.3",
     "config": "^3.3.9",

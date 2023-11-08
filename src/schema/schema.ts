@@ -16,6 +16,18 @@ export const roleSchema = object({
   }),
 });
 
+export const apSchema = object({
+  query: object({
+    _id: string({
+      required_error: "no data with that id",
+    }).regex(/^[0-9a-fA-F]{24}$/, "invlid id"),
+  }),
+  body: object({
+    carNo: string(),
+    vehicleType: string(),
+  }),
+});
+
 export const userRoleSchema = object({
   body: object({
     userId: string().regex(/^[0-9a-fA-F]{24}$/, "invlid id"),

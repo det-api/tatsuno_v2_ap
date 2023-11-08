@@ -1,6 +1,6 @@
 import { FilterQuery, UpdateQuery } from "mongoose";
 import userModel, { UserInput, UserDocument } from "../model/user.model";
-import { compass, createToken } from "../utils/helper";
+import { compass, createToken, set } from "../utils/helper";
 import { permitDocument } from "../model/permit.model";
 
 export const registerUser = async (payload: UserInput) => {
@@ -35,6 +35,9 @@ export const loginUser = async ({
     userObj["token"] = createToken(userObj);
 
     delete userObj.password;
+    set(userObj._id, userObj);
+    set("stationNo" , userObj.stationNo)
+    set("stationId" , userObj.stationId)
     return userObj;
   } catch (e) {
     throw new Error(e);

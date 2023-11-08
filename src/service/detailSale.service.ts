@@ -3,7 +3,7 @@ import detailSaleModel, { detailSaleDocument } from "../model/detailSale.model";
 import config from "config";
 import { UserDocument } from "../model/user.model";
 import moment from "moment-timezone";
-import { mqttEmitter, previous } from "../utils/helper";
+import { get, mqttEmitter, previous } from "../utils/helper";
 import axios from "axios";
 import {
   getCoustomer,
@@ -19,6 +19,7 @@ import {
 import { addDailyReport, getDailyReport } from "./dailyReport.service";
 import { fuelBalanceDocument } from "../model/fuelBalance.model";
 import { updateDevice } from "./device.service";
+import { getUser } from "./user.service";
 
 interface Data {
   nozzleNo: string;
@@ -218,61 +219,61 @@ export const addDetailSale = async (
 
     let result = await new detailSaleModel(body).save();
 
-    let checkDate = await getFuelBalance({
-      stationId: result.stationDetailId,
-      createAt: result.dailyReportDate,
-    });
+    // let checkDate = await getFuelBalance({
+    //   stationId: result.stationDetailId,
+    //   createAt: result.dailyReportDate,
+    // });
 
-    let checkRpDate = await getDailyReport({
-      stationId: result.stationDetailId,
-      dateOfDay: result.dailyReportDate,
-    });
+    // let checkRpDate = await getDailyReport({
+    //   stationId: result.stationDetailId,
+    //   dateOfDay: result.dailyReportDate,
+    // });
 
-    if (checkRpDate.length == 0) {
-      await addDailyReport({
-        stationId: result.stationDetailId,
-        dateOfDay: result.dailyReportDate,
-      });
-    }
-    if (checkDate.length == 0) {
-      let prevDate = previous(new Date(result.dailyReportDate));
+    // if (checkRpDate.length == 0) {
+    //   await addDailyReport({
+    //     stationId: result.stationDetailId,
+    //     dateOfDay: result.dailyReportDate,
+    //   });
+    // }
+    // if (checkDate.length == 0) {
+    //   let prevDate = previous(new Date(result.dailyReportDate));
 
-      let prevResult = await getFuelBalance({
-        stationId: result.stationDetailId,
-        createAt: prevDate,
-      });
+    //   let prevResult = await getFuelBalance({
+    //     stationId: result.stationDetailId,
+    //     createAt: prevDate,
+    //   });
 
-      await Promise.all(
-        prevResult.map(async (ea) => {
-          let obj: fuelBalanceDocument;
-          if (ea.balance == 0) {
-            obj = {
-              stationId: ea.stationId,
-              fuelType: ea.fuelType,
-              capacity: ea.capacity,
-              opening: ea.opening + ea.fuelIn,
-              tankNo: ea.tankNo,
-              createAt: result?.dailyReportDate,
-              nozzles: ea.nozzles,
-              balance: ea.opening + ea.fuelIn,
-            } as fuelBalanceDocument;
-          } else {
-            obj = {
-              stationId: ea.stationId,
-              fuelType: ea.fuelType,
-              capacity: ea.capacity,
-              opening: ea.opening + ea.fuelIn - ea.cash,
-              tankNo: ea.tankNo,
-              createAt: result?.dailyReportDate,
-              nozzles: ea.nozzles,
-              balance: ea.opening + ea.fuelIn - ea.cash,
-            } as fuelBalanceDocument;
-          }
+    //   await Promise.all(
+    //     prevResult.map(async (ea) => {
+    //       let obj: fuelBalanceDocument;
+    //       if (ea.balance == 0) {
+    //         obj = {
+    //           stationId: ea.stationId,
+    //           fuelType: ea.fuelType,
+    //           capacity: ea.capacity,
+    //           opening: ea.opening + ea.fuelIn,
+    //           tankNo: ea.tankNo,
+    //           createAt: result?.dailyReportDate,
+    //           nozzles: ea.nozzles,
+    //           balance: ea.opening + ea.fuelIn,
+    //         } as fuelBalanceDocument;
+    //       } else {
+    //         obj = {
+    //           stationId: ea.stationId,
+    //           fuelType: ea.fuelType,
+    //           capacity: ea.capacity,
+    //           opening: ea.opening + ea.fuelIn - ea.cash,
+    //           tankNo: ea.tankNo,
+    //           createAt: result?.dailyReportDate,
+    //           nozzles: ea.nozzles,
+    //           balance: ea.opening + ea.fuelIn - ea.cash,
+    //         } as fuelBalanceDocument;
+    //       }
 
-          await addFuelBalance(obj);
-        })
-      );
-    }
+    //       await addFuelBalance(obj);
+    //     })
+    //   );
+    // }
 
     mqttEmitter(`detpos/local_server/${depNo}`, nozzleNo + "appro");
 
@@ -316,7 +317,7 @@ export const detailSaleUpdateError = async (
       asyncAlready: "1",
       totalizer_liter: lastData[1].totalizer_liter + Number(body.saleLiter),
       totalizer_amount: lastData[1].totalizer_amount + Number(body.totalPrice),
-      isError: true,
+      isError: "E",
     };
 
     let updateData = await detailSaleModel.findOneAndUpdate(query, body);
@@ -339,8 +340,6 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
   try {
     const regex = /[A-Z]/g;
     let data: any[] = message.split(regex);
-    // console.log("wk");
-    // let [saleLiter, totalPrice] = deviceLiveData.get(data[0]);
     let saleLiter = deviceLiveData.get(data[0])?.[0];
     let totalPrice = deviceLiveData.get(data[0])?.[1];
 
@@ -358,27 +357,18 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
       return;
     }
 
-    // if (
-    //   saleLiter == 0 ||
-    //   (saleLiter == null && data[2] == 0) ||
-    //   data[2] == ""
-    // ) {
-    //   await detailSaleModel.findByIdAndDelete(lastData[0]?._id);
-    //   mqttEmitter("detpos/local_server", `${lastData[0]?.nozzleNo}/D1S1`);
-    //   return;
-    // }
-
     let updateBody: UpdateQuery<detailSaleDocument> = {
       nozzleNo: data[0],
       salePrice: data[1],
       saleLiter: saleLiter,
       totalPrice: totalPrice,
-      asyncAlready: "1",
+      asyncAlready: lastData[0].asyncAlready == "a" ? "a" : "1",
       totalizer_liter:
         lastData[1].totalizer_liter + Number(saleLiter ? saleLiter : 0),
       totalizer_amount:
         lastData[1].totalizer_amount + Number(totalPrice ? totalPrice : 0),
       devTotalizar_liter: data[4],
+      isError: "A",
     };
 
     await detailSaleModel.findByIdAndUpdate(lastData[0]._id, updateBody);
@@ -390,10 +380,10 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
     }
 
     // cloud and balance calculation
-    let checkDate = await getFuelBalance({
-      stationId: result.stationDetailId,
-      createAt: result.dailyReportDate,
-    });
+    // let checkDate = await getFuelBalance({
+    //   stationId: result.stationDetailId,
+    //   createAt: result.dailyReportDate,
+    // });
     let checkRpDate = await getDailyReport({
       stationId: result.stationDetailId,
       dateOfDay: result.dailyReportDate,
@@ -405,55 +395,55 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
       });
     }
     // create the data in fuel balance db data with today date is not exist in db
-    if (checkDate.length == 0) {
-      let prevDate = previous(new Date(result.dailyReportDate));
+    // if (checkDate.length == 0) {
+    //   let prevDate = previous(new Date(result.dailyReportDate));
 
-      let prevResult = await getFuelBalance({
-        stationId: result.stationDetailId,
-        createAt: prevDate,
-      });
-      await Promise.all(
-        prevResult.map(async (ea) => {
-          let obj: fuelBalanceDocument;
-          if (ea.balance == 0) {
-            obj = {
-              stationId: ea.stationId,
-              fuelType: ea.fuelType,
-              capacity: ea.capacity,
-              opening: ea.opening + ea.fuelIn,
-              tankNo: ea.tankNo,
-              createAt: result?.dailyReportDate,
-              nozzles: ea.nozzles,
-              balance: ea.opening + ea.fuelIn,
-            } as fuelBalanceDocument;
-          } else {
-            obj = {
-              stationId: ea.stationId,
-              fuelType: ea.fuelType,
-              capacity: ea.capacity,
-              opening: ea.opening + ea.fuelIn - ea.cash,
-              tankNo: ea.tankNo,
-              createAt: result?.dailyReportDate,
-              nozzles: ea.nozzles,
-              balance: ea.opening + ea.fuelIn - ea.cash,
-            } as fuelBalanceDocument;
-          }
+    //   let prevResult = await getFuelBalance({
+    //     stationId: result.stationDetailId,
+    //     createAt: prevDate,
+    //   });
+    //   await Promise.all(
+    //     prevResult.map(async (ea) => {
+    //       let obj: fuelBalanceDocument;
+    //       if (ea.balance == 0) {
+    //         obj = {
+    //           stationId: ea.stationId,
+    //           fuelType: ea.fuelType,
+    //           capacity: ea.capacity,
+    //           opening: ea.opening + ea.fuelIn,
+    //           tankNo: ea.tankNo,
+    //           createAt: result?.dailyReportDate,
+    //           nozzles: ea.nozzles,
+    //           balance: ea.opening + ea.fuelIn,
+    //         } as fuelBalanceDocument;
+    //       } else {
+    //         obj = {
+    //           stationId: ea.stationId,
+    //           fuelType: ea.fuelType,
+    //           capacity: ea.capacity,
+    //           opening: ea.opening + ea.fuelIn - ea.cash,
+    //           tankNo: ea.tankNo,
+    //           createAt: result?.dailyReportDate,
+    //           nozzles: ea.nozzles,
+    //           balance: ea.opening + ea.fuelIn - ea.cash,
+    //         } as fuelBalanceDocument;
+    //       }
 
-          await addFuelBalance(obj);
-        })
-      );
-    }
+    //       await addFuelBalance(obj);
+    //     })
+    //   );
+    // }
     mqttEmitter("detpos/local_server", `${result?.nozzleNo}/D1S1`);
 
-    await calcFuelBalance(
-      {
-        stationId: result.stationDetailId,
-        fuelType: result.fuelType,
-        createAt: result.dailyReportDate,
-      },
-      { liter: result.saleLiter },
-      result.nozzleNo
-    );
+    // await calcFuelBalance(
+    //   {
+    //     stationId: result.stationDetailId,
+    //     fuelType: result.fuelType,
+    //     createAt: result.dailyReportDate,
+    //   },
+    //   { liter: result.saleLiter },
+    //   result.nozzleNo
+    // );
 
     let prevDate = previous(new Date(result.dailyReportDate));
 
@@ -461,8 +451,8 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
       asyncAlready: 0,
       dailyReportDate: prevDate,
     });
+    // cloud upload 0 condition
     if (checkErrorData.length > 0) {
-      console.log("error 0 in prev date");
       for (const ea of checkErrorData) {
         try {
           let url = config.get<string>("detailsaleCloudUrl");
@@ -481,6 +471,8 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
         }
       }
     }
+
+    //cloud upload 1 conditon
     let finalData = await detailSaleModel.find({ asyncAlready: 1 });
     for (const ea of finalData) {
       try {
@@ -499,7 +491,6 @@ export const detailSaleUpdateByDevice = async (topic: string, message) => {
         }
       }
     }
-    // mqttEmitter("detpos/local_server", `${result?.nozzleNo}/D1S1`);
   } catch (e) {
     throw new Error(e);
   }
@@ -622,4 +613,134 @@ export const initialDetail = async (body) => {
   } catch (e) {
     throw e;
   }
+};
+
+export const addDetailSaleByAp = async (depNo: string, nozzleNo: string) => {
+  try {
+    const currentDate = moment().tz("Asia/Yangon").format("YYYY-MM-DD");
+    const cuurentDateForVocono = moment().tz("Asia/Yangon").format("DDMMYYYY");
+
+    const options = { timeZone: "Asia/Yangon", hour12: false };
+
+    let currentDateTime = new Date().toLocaleTimeString("en-US", options);
+
+    const [hour, minute, second] = currentDateTime.split(":").map(Number);
+
+    if (hour == 24) {
+      currentDateTime = `00:${minute}:${second}`;
+    }
+
+    let iso: Date = new Date(`${currentDate}T${currentDateTime}.000Z`);
+
+    // get today count
+    const count = await detailSaleModel.countDocuments({
+      dailyReportDate: currentDate,
+    });
+
+    let stationNo = await get("stationNo");
+    let stationId = await get("stationId");
+
+    if (!stationId || !stationNo) {
+      const user = await getUser({});
+      stationNo = user[0].stationNo;
+      stationId = user[0].stationId;
+    }
+
+    const lastDocument = await detailSaleModel
+      .findOne({ nozzleNo: nozzleNo })
+      .sort({ _id: -1, createAt: -1 });
+
+    let body = {
+      // ...body,
+      nozzleNo,
+      vehicleType: "",
+      carNo: "",
+      cashType: "paided",
+      fuelType: lastDocument?.fuelType,
+      couObjId: null,
+      device: "auto_permit",
+      vocono: `${stationNo}/Ca/${cuurentDateForVocono}/${count + 1}`,
+      stationDetailId: stationNo,
+      casherCode: "Ca",
+      asyncAlready: "a",
+      totalizer_liter: lastDocument?.totalizer_liter,
+      totalizer_amount: lastDocument?.totalizer_amount,
+      isError: "AU",
+      createAt: iso,
+    };
+
+    let result = await new detailSaleModel(body).save();
+    mqttEmitter(`detpos/local_server/${depNo}`, nozzleNo + "appro");
+
+    return result;
+  } catch (e) {
+    throw new Error(e);
+  }
+};
+
+export const updateDetailSaleByAp = async (
+  id: detailSaleDocument["_id"],
+  body: UpdateQuery<detailSaleDocument>
+) => {
+  let data = await detailSaleModel.findById(id);
+  if (!data) throw new Error("no data with that id");
+
+  let updateBody = {
+    ...body,
+    asyncAlready : "1",
+  }
+
+  await detailSaleModel.findByIdAndUpdate(id, updateBody);
+
+  let result =  await detailSaleModel.findById(id);
+
+  if(!result) throw new Error ("error in update")
+
+  let prevDate = previous(new Date(result.dailyReportDate));
+
+    let checkErrorData = await detailSaleModel.find({
+      asyncAlready: 0,
+      dailyReportDate: prevDate,
+    });
+    // cloud upload 0 condition
+    if (checkErrorData.length > 0) {
+      for (const ea of checkErrorData) {
+        try {
+          let url = config.get<string>("detailsaleCloudUrl");
+          let response = await axios.post(url, ea);
+          if (response.status == 200) {
+            await detailSaleModel.findByIdAndUpdate(ea._id, {
+              asyncAlready: "2",
+            });
+          } else {
+            break;
+          }
+        } catch (error) {
+          if (error.response && error.response.status === 409) {
+          } else {
+          }
+        }
+      }
+    }
+
+    //cloud upload 1 conditon
+
+    let finalData = await detailSaleModel.find({ asyncAlready: 1 });
+    for (const ea of finalData) {
+      try {
+        let url = config.get<string>("detailsaleCloudUrl");
+        let response = await axios.post(url, ea);
+        if (response.status == 200) {
+          await detailSaleModel.findByIdAndUpdate(ea._id, {
+            asyncAlready: "2",
+          });
+        } else {
+          break;
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 409) {
+        } else {
+        }
+      }
+    }
 };

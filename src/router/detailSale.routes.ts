@@ -7,6 +7,7 @@ import {
   getDetailSaleHandler,
   initialDetailHandler,
   preSetDetailSaleHandler,
+  updateDetailSaleByApHandler,
   updateDetailSaleHandler,
 } from "../controller/detailSale.controller";
 import { managerValidator } from "../middleware/managerValidator";
@@ -20,6 +21,7 @@ import {
 } from "../middleware/validator";
 import {
   allSchemaId,
+  apSchema,
   detailSaleErrorUpdateSchema,
   detailSaleSchema,
   detailSaleUpdateSchema,
@@ -29,7 +31,7 @@ const detailSaleRoute = require("express").Router();
 
 detailSaleRoute.get(
   "/pagi/:page",
-  validateToken2,
+  validateToken,
   hasAnyPermit(["view"]),
   getDetailSaleHandler
 );
@@ -92,6 +94,13 @@ detailSaleRoute.post(
   roleValidator(["admin", "installer"]),
   hasAnyPermit(["add"]),
   initialDetailHandler
+);
+
+detailSaleRoute.post(
+  "/ap-update",
+  validateToken,
+  validateAll(apSchema),
+  updateDetailSaleByApHandler
 );
 
 export default detailSaleRoute;

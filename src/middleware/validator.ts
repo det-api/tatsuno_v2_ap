@@ -1,5 +1,5 @@
 import { NextFunction, Response, Request } from "express";
-import { checkToken } from "../utils/helper";
+import { checkToken, get } from "../utils/helper";
 import { getUser } from "../service/user.service";
 
 export const validateAll =
@@ -27,12 +27,15 @@ export const validateToken = async (
       return next(new Error("invalid token"));
     }
     let decoded = checkToken(token);
-    let user = await getUser({ _id: decoded._id });
+    // let user = await getUser({ _id: decoded._id });
+    let user = await get(decoded._id);
+    if (!user) {
+      return next(new Error("invalid token"));
+    }
     req.body = req.body || {};
     req.body.user = user;
     next();
   } catch (e) {
-    next(new Error(e));
   }
 };
 export const validateToken2 = async (
@@ -48,10 +51,8 @@ export const validateToken2 = async (
       return next(new Error("invalid token"));
     }
     let decoded = checkToken(token);
-    // console.log(decoded);
     req.body = req.body || {};
-    req.body.user = [decoded];
-    // console.log(req.body.user);
+    req.body.user = decoded;
     next();
   } catch (e) {
     next(new Error(e));

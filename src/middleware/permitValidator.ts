@@ -6,7 +6,7 @@ export const hasAnyPermit =
     try{
       let bol: boolean = false;
     for (let i = 0; i < permits.length; i++) {
-      let hasPermit = req.body.user[0].permits.find(
+      let hasPermit = req.body.user.permits.find(
         (ea: permitDocument) => ea.name == permits[i]
       );
       if (hasPermit) {

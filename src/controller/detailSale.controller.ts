@@ -11,6 +11,7 @@ import {
   detailSaleUpdateError,
   preSetDetailSale,
   initialDetail,
+  updateDetailSaleByAp,
   // detailSaleByDate,
 } from "../service/detailSale.service";
 import {
@@ -252,3 +253,15 @@ export const initialDetailHandler = async (
     next(new Error(e));
   }
 };
+
+export const updateDetailSaleByApHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try{
+    let result = await updateDetailSaleByAp(req.query._id , req.body )
+
+    fMsg(res , 'updated successfully' ,result )
+  }catch(e){}
+}

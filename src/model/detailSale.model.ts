@@ -20,7 +20,7 @@ export interface detailSaleDocument extends mongoose.Document {
   totalizer_liter: number;
   totalizer_amount: number;
   devTotalizar_liter: number;
-  isError: boolean;
+  isError: string;
   preset: string;
   device: string;
   createAt: Date;
@@ -62,7 +62,13 @@ const detailSaleSchema = new Schema({
     type: String,
     default: new Date().toLocaleDateString("fr-CA"),
   },
-  isError: { type: Boolean, default: false },
+  isError: { type: String, default: "0", enum: ["0","AU","A", "R", "E"] },
+  // 0 = manual permited
+  // AU = auto permited
+  // A = final completed process
+  // R = reload error
+  // "E" = Error cash update
+  
   preset: { type: String, default: null },
   device: { type: String, required: true },
   createAt: { type: Date, default: Date.now },
