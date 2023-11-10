@@ -26,9 +26,9 @@ export const apFinalDropController = async (
   depNo: string,
   nozzleNo: string
 ) => {
-  let devType = await get(`dep_${depNo}`);
-  let approved = await get(nozzleNo);
 
+  let devType = await get("dep_" + depNo.trim());
+  let approved = await get(nozzleNo);
   if (!devType) {
     let device = await getDevice({ dep_no: depNo });
     await set(`dep_${depNo}`, device[0].dep_type);
