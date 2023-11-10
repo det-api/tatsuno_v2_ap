@@ -38,7 +38,7 @@ detailSaleRoute.get(
 
 detailSaleRoute.get(
   "/by-date",
-  validateToken,
+  validateToken2,
   hasAnyPermit(["view"]),
   getDetailSaleByDateHandler
 );

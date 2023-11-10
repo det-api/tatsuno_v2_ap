@@ -1,9 +1,15 @@
-import { autoPermitAddHandler, autoPermitUpdateHandler } from "../controller/autoPermit.controller";
+import {
+  autoPermitAddHandler,
+  autoPermitGetHandler,
+  autoPermitUpdateHandler,
+} from "../controller/autoPermit.controller";
 
 const autoPermitRoute = require("express").Router();
 
-autoPermitRoute.post("/" , autoPermitAddHandler)
+autoPermitRoute.get("/", autoPermitGetHandler);
 
-autoPermitRoute.patch("/" , autoPermitUpdateHandler)
+autoPermitRoute.post("/", autoPermitAddHandler);
 
-export default autoPermitRoute
+autoPermitRoute.patch("/", autoPermitUpdateHandler);
+
+export default autoPermitRoute;

@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { autoPermitAdd, autoPermitUpdate } from "../service/autoPermit.service";
+import {
+  autoPermitAdd,
+  autoPermitGet,
+  autoPermitUpdate,
+} from "../service/autoPermit.service";
 import fMsg from "../utils/helper";
 
 export const autoPermitUpdateHandler = async (
@@ -30,7 +34,15 @@ export const autoPermitAddHandler = async (
   }
 };
 
-
-export const autoPermitApprov = async () => {
-
-}
+export const autoPermitGetHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    let result = await autoPermitGet();
+    fMsg(res, "auto permit get", result);
+  } catch (e) {
+    next(e);
+  }
+};
