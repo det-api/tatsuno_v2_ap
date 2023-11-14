@@ -45,7 +45,7 @@ detailSaleRoute.get(
 
 detailSaleRoute.get(
   "/pagi/by-date/:page",
-  validateToken,
+  validateToken2,
   hasAnyPermit(["view"]),
   getDetailSaleDatePagiHandler
 );

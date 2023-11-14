@@ -4,7 +4,7 @@ import {
   autoPermitGet,
   autoPermitUpdate,
 } from "../service/autoPermit.service";
-import fMsg from "../utils/helper";
+import fMsg, { mqttEmitter } from "../utils/helper";
 
 export const autoPermitUpdateHandler = async (
   req: Request,
@@ -14,6 +14,8 @@ export const autoPermitUpdateHandler = async (
   try {
     if (!req.body.mode) throw new Error("you need mode");
     let result = await autoPermitUpdate(req.body.mode);
+    if (!result) throw new Error("you can't update mode");
+    mqttEmitter("detpos/local_server/mode", result?.mode);
     fMsg(res, "mode changed", result);
   } catch (e) {
     next(e);

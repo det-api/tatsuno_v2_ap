@@ -49,8 +49,7 @@ export const cashierRoleAddPermit = async () => {
   let permit = await getPermit({});
 
   permit.forEach(async (ea) => {
-    // console.log(ea);
-    // console.log(ea);
+
     if (ea.name == "delete" || ea.name == "edit") {
       return;
     }
